@@ -109,8 +109,8 @@ not_oct:
 not_bin:
     ;convert decimal
     lea     eax, [ebp - 19]     ; load the address of string buffer
-    push    eax                 ; pass the address of buffer to convert_number_decimal subroutine
-    ; call    convert_decimal_number
+    push    eax                 ; pass the address of buffer to convert_decimal_number subroutine
+    call    convert_decimal_number
     add     esp, 4              ; pop arguments from the stack
     jmp     return
 
@@ -131,7 +131,7 @@ convert_number:
     mov     esi, [ebp + 12]     ; set index on the beginning of buffer array
 
     xor     eax, eax            ; clear accumulator, it will store the converted value
-    xor     edx, edx
+    xor     edx, edx            ; clear temporary register
     mov     cl, BYTE [ebp + 8]  ; load cl with exponent - only cl can be used for that purpose
 
 next_digit:
@@ -161,6 +161,32 @@ save_result:
 
     cmp     BYTE [esi], 0
     jne     next_digit      ; if character is '\0', finish subroutine
+
+    ; epilogue
+    pop     esi
+    leave
+    ret
+
+convert_decimal_number:
+    ; prologue
+    push    ebp
+    mov     ebp, esp
+    push    esi
+
+    mov     esi, [ebp + 8]     ; set index on the beginning of buffer array
+    xor     eax, eax            ; clear accumulator, it will store the converted value
+
+next_digit_decimal:
+    imul     eax, 10
+    sub     eax, 48             ; substract value of ASCII code for '0' to get the proper value
+
+    mov     dl, BYTE [esi]
+    ; add     al, BYTE [esi]    ; add digit's ASCII code to accumulator
+    add     eax, edx
+    inc     esi                 ; increment buffer index
+
+    cmp     BYTE [esi], 0
+    jne     next_digit_decimal  ; if character is '\0', finish subroutine
 
     ; epilogue
     pop     esi
