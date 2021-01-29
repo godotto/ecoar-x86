@@ -6,12 +6,14 @@ firstconst:
     ; prologue
     push    ebp
     mov     ebp, esp
-    sub     esp, 16         ; allocate char array which will serve as a buffer and a bool variable
+    sub     esp, 20         ; allocate char array which will serve as a buffer and two bool variables
     
     mov     esi, [ebp + 8]  ; pointer on string argument
     xor     eax, eax        ; clear accumulator
 
-    mov     [ebp - 4], eax  ; set boolean variable to false
+    mov     [ebp - 4], eax  ; set isNumber boolean variable to false
+    mov     [ebp -20], eax  ; set isFirstDigitDecimal variable to false
+
     xor     ecx, ecx        ; set string buffer index to zero
 
     mov     al, BYTE [esi]  ; load first character from argument
@@ -39,6 +41,18 @@ while_loop_beginning:
     ja      while_loop_next_char    ; if character is greater than 'f', get next character
 
 while_loop_char_ok:
+    cmp     BYTE [ebp - 20], 0
+    jnz     not_first_digit
+
+    cmp     eax, '9'
+    ja      not_decimal
+    mov     BYTE [ebp - 20], 1
+    jmp     not_first_digit
+
+not_decimal:
+    mov     BYTE [ebp - 20], 2
+
+not_first_digit:
     mov     [ebp - 19 + ecx], al    ; save digit into buffer
     inc     ecx                     ; decrement buffer's index
     mov     BYTE [ebp - 4], 1       ; set boolean variable to true, as number was encountered
@@ -59,6 +73,6 @@ end_while_loop:
     
 return:
     ; epilogue
-    add     esp, 16
+    add     esp, 20
     leave
     ret
