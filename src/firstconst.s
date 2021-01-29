@@ -41,13 +41,14 @@ while_loop_beginning:
     jb      while_loop_next_char    ; if character is less than 'A', get next character
 
     cmp     eax, 'F'
-    jna     while_loop_char_ok      ; if character is greater than 'F', check if it is lower case hex digit
+    ja      while_loop_next_char    ; if character is greater than 'F', get next character
+    ; jna     while_loop_char_ok      ; if character is greater than 'F', check if it is lower case hex digit
 
-    cmp     eax, 'a'
-    jb      while_loop_next_char    ; if character is less than 'a', get next character
+    ; cmp     eax, 'a'
+    ; jb      while_loop_next_char    ; if character is less than 'a', get next character
 
-    cmp     eax, 'f'
-    ja      while_loop_next_char    ; if character is greater than 'f', get next character
+    ; cmp     eax, 'f'
+    ; ja      while_loop_next_char    ; if character is greater than 'f', get next character
 
 while_loop_char_ok:
     mov     [ebp - 19 + ecx], al    ; save digit into buffer
@@ -102,7 +103,7 @@ not_oct:
     lea     eax, [ebp - 19]     ; load the address of string buffer
     push    eax                 ; pass the address of buffer to convert_number subroutine
     push    1                   ; pass exponent of 2's power to convert_number subroutine
-    ; call    convert_number
+    call    convert_number
     add     esp, 8              ; pop arguments from the stack
     jmp     return     
 
@@ -145,13 +146,13 @@ next_digit:
 
 not_decimal:
     cmp     BYTE [esi], 'F' 
-    jg      not_upper_case  ; if not upper case letter, convert lower case letter
+    ; jg      not_upper_case  ; if not upper case letter, convert lower case letter
 
     sub     eax, 55         ; substract ASCII code 55 to get the proper value
     jmp     save_result
 
-not_upper_case:
-    sub     eax, 87     ; substract ASCII code 87 to get the proper value
+; not_upper_case:
+;     sub     eax, 87     ; substract ASCII code 87 to get the proper value
 
 save_result:
     mov     dl, BYTE [esi]
@@ -177,7 +178,7 @@ convert_decimal_number:
     xor     eax, eax            ; clear accumulator, it will store the converted value
 
 next_digit_decimal:
-    imul     eax, 10
+    imul    eax, 10
     sub     eax, 48             ; substract value of ASCII code for '0' to get the proper value
 
     mov     dl, BYTE [esi]
