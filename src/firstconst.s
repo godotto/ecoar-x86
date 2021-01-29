@@ -75,26 +75,27 @@ end_while_loop:
     lea     eax, [ebp - 19]     ; load the address of string buffer
     push    eax                 ; pass the address of buffer to convert_number subroutine
     push    4                   ; pass exponent of 2's power to convert_number subroutine
-    ; call    convert_number
+    call    convert_number
     add     esp, 8              ; pop arguments from the stack
     jmp     return
 
 not_hex:
     cmp     edx, 'q'
-    jne     not_oct
+    je      convert_oct
     cmp     edx, 'o'
-    jne     not_oct     ; if suffix is not 'o' nor 'q', it is not an octal value
+    jne     not_oct             ; if suffix is not 'o' nor 'q', it is not an octal value
 
+convert_oct:
     ; convert octal
     lea     eax, [ebp - 19]     ; load the address of string buffer
     push    eax                 ; pass the address of buffer to convert_number subroutine
     push    3                   ; pass exponent of 2's power to convert_number subroutine
-    ; call    convert_number
+    call    convert_number
     add     esp, 8              ; pop arguments from the stack
     jmp     return
 
 not_oct:
-    cmp     edx, 'b'
+    cmp     edx, 'b'            ; if suffix is not 'b', it is not a binary value
     jne     not_bin
 
     ;convert binary
@@ -106,7 +107,7 @@ not_oct:
     jmp     return     
 
 not_bin:
-    ;convert binary
+    ;convert decimal
     lea     eax, [ebp - 19]     ; load the address of string buffer
     push    eax                 ; pass the address of buffer to convert_number_decimal subroutine
     ; call    convert_decimal_number
@@ -118,5 +119,50 @@ return:
     pop     esi
     pop     edx
     add     esp, 20
+    leave
+    ret
+
+convert_number:
+    ; prologue
+    push    ebp
+    mov     ebp, esp
+    push    esi
+
+    mov     esi, [ebp + 12]     ; set index on the beginning of buffer array
+
+    xor     eax, eax            ; clear accumulator, it will store the converted value
+    xor     edx, edx
+    mov     cl, BYTE [ebp + 8]  ; load cl with exponent - only cl can be used for that purpose
+
+next_digit:
+    shl     eax, cl         ; multiply accumulator's value by adequate power of 2
+    
+    cmp     BYTE [esi], '9'
+    jg      not_decimal     ; if not decimal digit, check if upper or lower case letter
+
+    sub     eax, 48         ; substract value of ASCII code for '0' to get the proper value
+    jmp     save_result
+
+not_decimal:
+    cmp     BYTE [esi], 'F' 
+    jg      not_upper_case  ; if not upper case letter, convert lower case letter
+
+    sub     eax, 55         ; substract ASCII code 55 to get the proper value
+    jmp     save_result
+
+not_upper_case:
+    sub     eax, 87     ; substract ASCII code 87 to get the proper value
+
+save_result:
+    mov     dl, BYTE [esi]
+    ; add     al, BYTE [esi] ; add digit's ASCII code to accumulator
+    add     eax, edx
+    inc     esi             ; increment buffer index
+
+    cmp     BYTE [esi], 0
+    jne     next_digit      ; if character is '\0', finish subroutine
+
+    ; epilogue
+    pop     esi
     leave
     ret
