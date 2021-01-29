@@ -69,6 +69,9 @@ while_loop_next_char:
     jne     while_loop_beginning    ; if number was already read, exit the loop
 
 end_while_loop:
+    cmp     BYTE [ebp - 4], 0
+    je      no_number           ; if there was no number in string, return 0
+    
     cmp     edx, 'h'
     jne     not_hex             ; if suffix is not 'h', it is not a hexadecimal value
 
@@ -99,7 +102,7 @@ not_oct:
     cmp     edx, 'b'            ; if suffix is not 'b', it is not a binary value
     jne     not_bin
 
-    ;convert binary
+    ; convert binary
     lea     eax, [ebp - 19]     ; load the address of string buffer
     push    eax                 ; pass the address of buffer to convert_number subroutine
     push    1                   ; pass exponent of 2's power to convert_number subroutine
@@ -108,12 +111,15 @@ not_oct:
     jmp     return     
 
 not_bin:
-    ;convert decimal
+    ; convert decimal
     lea     eax, [ebp - 19]     ; load the address of string buffer
     push    eax                 ; pass the address of buffer to convert_decimal_number subroutine
     call    convert_decimal_number
     add     esp, 4              ; pop arguments from the stack
     jmp     return
+
+no_number:
+    xor     eax, eax    ; if there was no number in string, return 0
 
 return:
     ; epilogue
