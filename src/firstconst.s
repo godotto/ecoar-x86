@@ -17,9 +17,9 @@ firstconst:
     je      state_q2        ; if character is space, go to state q2 (separator)
 
     cmp     al, 59
-    je      state_q5        ; if character is semicolon, it is a comment and go to q5 (final state)
+    je      state_q5        ; if character is a semicolon, it is a comment and go to q5 (final state)
 
-    cmp     al, '\0'
+    cmp     al, 0
     je      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
 
     cmp     al, 'A'
@@ -32,18 +32,60 @@ firstconst:
     jb      invalid_string  ; if character is below a, it is not a valid first character and automaton is stuck
 
     cmp     al, 'z' 
-    jna     state_q1        ; if character is lower case letter, go to q1 (token)
+    ja      invalid_string  ; if character is lower case letter, go to q1 (token)
 
-state_q1:
+state_q1:                   ; state q1 - token
+    inc     esi             ; move to the next character
+    mov     al, BYTE [esi]  ; load the character
 
+    cmp     al, ':'
+    je      state_q1        ; if character is a colon, it is a label and go to q1
+
+    cmp     al, 59
+    je      state_q5        ; if character is a semicolon, it is a comment and go to q5 (final state)
+
+    cmp     al, 0
+    je      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
+
+    cmp     al, ' '
+    je      state_q2        ; if character is space, go to state q2 (separator)
+
+    cmp     al, ']'
+    je      state_q2        ; if character is a right square bracket, go to q2 (separator)
+
+    cmp     al, '+'
+    jb      invalid_string
+
+    cmp     al, '-'
+    jna     state_q2        ; if character is +, - or a comma go to q2 (separator)
+
+    cmp     al, '0'
+    jb      invalid_string  ; if it chatacter is less than any digit, it is invalid character
+
+    cmp     al, '9'
+    jna     state_q1        ; if it is a digit, stay at q1
+
+    cmp     al, 'A'
+    jb      invalid_string  ; if character is below A, it is not a valid first character and automaton is stuck
+
+    cmp     al, 'Z'
+    jna     state_q1        ; if character is upper case letter, stay at q1 (token)
+
+    cmp     al, 'a'
+    jb      invalid_string  ; if character is below a, it is not a valid first character and automaton is stuck
+
+    cmp     al, 'z' 
+    jna     state_q1        ; if character is lower case letter, stay at q1 (token)
+    jmp     invalid_string  ; if it is other character, it is invalid and automaton is stuck
+    
 state_q2:
-
+    
 state_q3:
 
 state_q4:
 
 state_q5:
-
+   
 state_q6:
 
 invalid_string:
@@ -135,7 +177,7 @@ not_decimal:
     sub     eax, 55         ; substract ASCII code 55 to get the proper value
     jmp     save_result
 
-; not_upper_case:
+not_upper_case:
     sub     eax, 87     ; substract ASCII code 87 to get the proper value
 
 save_result:
