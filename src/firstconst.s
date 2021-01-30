@@ -6,126 +6,104 @@ firstconst:
     ; prologue
     push    ebp
     mov     ebp, esp
-    sub     esp, 16         ; allocate char array which will serve as a buffer, bool variable and 1 byte integer variable
-    push    esi             ; save esi on stack as it will be used in function
+    push    esi
+
+    mov     esi, [ebp + 8]  ; string's argument index
     
-    mov     esi, [ebp + 8]  ; pointer on string argument
-    xor     eax, eax        ; clear accumulator
-    xor     edx, edx        ; clear register for previous character
+    ; state q0 - initial state
+    mov     al, BYTE [esi]  ; load the character
 
-    mov     ecx, 11         ; loop counter
+    cmp     al, ' '
+    je      state_q2        ; if character is space, go to state q2 (separator)
 
-clear_loop_beginning:               ; loop which is zeroing buffer array
-    mov     [ebp - 19 + ecx], eax
-    loop    clear_loop_beginning
+    cmp     al, 59
+    je      state_q5        ; if character is semicolon, it is a comment and go to q5 (final state)
 
-    mov     [ebp - 4], eax          ; set isNumber boolean variable to false
-    xor     ecx, ecx                ; set string buffer index to zero
+    cmp     al, '\0'
+    je      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
 
-    mov     al, BYTE [esi]          ; load first character from argument
+    cmp     al, 'A'
+    jb      invalid_string  ; if character is below A, it is not a valid first character and automaton is stuck
 
-while_loop_beginning:
-    test    eax, eax
-    jz      end_while_loop          ; if character is '\0', exit the loop
+    cmp     al, 'Z'
+    jna     state_q1        ; if character is upper case letter, go to q1 (token)
+
+    cmp     al, 'a'
+    jb      invalid_string  ; if character is below a, it is not a valid first character and automaton is stuck
+
+    cmp     al, 'z' 
+    jna     state_q1        ; if character is lower case letter, go to q1 (token)
+
+state_q1:
+
+state_q2:
+
+state_q3:
+
+state_q4:
+
+state_q5:
+
+state_q6:
+
+invalid_string:
+
+; end_while_loop:
+;     cmp     BYTE [ebp - 4], 0
+;     je      no_number           ; if there was no number in string, return 0
     
-    cmp     eax, '0'
-    jb      while_loop_next_char    ; if character is less than '0', get next character
+;     cmp     edx, 'h'
+;     jne     not_hex             ; if suffix is not 'h', it is not a hexadecimal value
 
-    cmp     eax, '9'
-    jna     while_loop_char_ok      ; if character is greater than '9', check if it is hex digit
+;     ; convert hexadecimal
+;     lea     eax, [ebp - 19]     ; load the address of string buffer
+;     push    eax                 ; pass the address of buffer to convert_number subroutine
+;     push    4                   ; pass exponent of 2's power to convert_number subroutine
+;     call    convert_number
+;     add     esp, 8              ; pop arguments from the stack
+;     jmp     return
 
-    cmp     BYTE [ebp - 4], 0       
-    je      while_loop_next_char    ; if character is not a decimal digit and number has not been encountered, get next character
+; not_hex:
+;     cmp     edx, 'q'
+;     je      convert_oct
+;     cmp     edx, 'o'
+;     jne     not_oct             ; if suffix is not 'o' nor 'q', it is not an octal value
 
-    cmp     eax, 'A'
-    jb      while_loop_next_char    ; if character is less than 'A', get next character
+; convert_oct:
+;     ; convert octal
+;     lea     eax, [ebp - 19]     ; load the address of string buffer
+;     push    eax                 ; pass the address of buffer to convert_number subroutine
+;     push    3                   ; pass exponent of 2's power to convert_number subroutine
+;     call    convert_number
+;     add     esp, 8              ; pop arguments from the stack
+;     jmp     return
 
-    cmp     eax, 'F'
-    ja      while_loop_next_char    ; if character is greater than 'F', get next character
-    ; jna     while_loop_char_ok      ; if character is greater than 'F', check if it is lower case hex digit
+; not_oct:
+;     cmp     edx, 'b'            ; if suffix is not 'b', it is not a binary value
+;     jne     not_bin
 
-    ; cmp     eax, 'a'
-    ; jb      while_loop_next_char    ; if character is less than 'a', get next character
+;     ; convert binary
+;     lea     eax, [ebp - 19]     ; load the address of string buffer
+;     push    eax                 ; pass the address of buffer to convert_number subroutine
+;     push    1                   ; pass exponent of 2's power to convert_number subroutine
+;     call    convert_number
+;     add     esp, 8              ; pop arguments from the stack
+;     jmp     return     
 
-    ; cmp     eax, 'f'
-    ; ja      while_loop_next_char    ; if character is greater than 'f', get next character
+; not_bin:
+;     ; convert decimal
+;     lea     eax, [ebp - 19]     ; load the address of string buffer
+;     push    eax                 ; pass the address of buffer to convert_decimal_number subroutine
+;     call    convert_decimal_number
+;     add     esp, 4              ; pop arguments from the stack
+;     jmp     return
 
-while_loop_char_ok:
-    mov     [ebp - 19 + ecx], al    ; save digit into buffer
-    inc     ecx                     ; decrement buffer's index
-    mov     BYTE [ebp - 4], 1       ; set boolean variable to true, as number was encountered
-
-    inc     esi
-    mov     al, BYTE [esi]          ; load next character from string argument
-
-    jmp     while_loop_beginning    ; proceed next character
-
-while_loop_next_char:
-    mov     edx, eax                ; store previous character
-    inc     esi
-    mov     al, BYTE [esi]          ; load next character from string argument
-    
-    cmp     BYTE [ebp - 4], 1
-    jne     while_loop_beginning    ; if number was already read, exit the loop
-
-end_while_loop:
-    cmp     BYTE [ebp - 4], 0
-    je      no_number           ; if there was no number in string, return 0
-    
-    cmp     edx, 'h'
-    jne     not_hex             ; if suffix is not 'h', it is not a hexadecimal value
-
-    ; convert hexadecimal
-    lea     eax, [ebp - 19]     ; load the address of string buffer
-    push    eax                 ; pass the address of buffer to convert_number subroutine
-    push    4                   ; pass exponent of 2's power to convert_number subroutine
-    call    convert_number
-    add     esp, 8              ; pop arguments from the stack
-    jmp     return
-
-not_hex:
-    cmp     edx, 'q'
-    je      convert_oct
-    cmp     edx, 'o'
-    jne     not_oct             ; if suffix is not 'o' nor 'q', it is not an octal value
-
-convert_oct:
-    ; convert octal
-    lea     eax, [ebp - 19]     ; load the address of string buffer
-    push    eax                 ; pass the address of buffer to convert_number subroutine
-    push    3                   ; pass exponent of 2's power to convert_number subroutine
-    call    convert_number
-    add     esp, 8              ; pop arguments from the stack
-    jmp     return
-
-not_oct:
-    cmp     edx, 'b'            ; if suffix is not 'b', it is not a binary value
-    jne     not_bin
-
-    ; convert binary
-    lea     eax, [ebp - 19]     ; load the address of string buffer
-    push    eax                 ; pass the address of buffer to convert_number subroutine
-    push    1                   ; pass exponent of 2's power to convert_number subroutine
-    call    convert_number
-    add     esp, 8              ; pop arguments from the stack
-    jmp     return     
-
-not_bin:
-    ; convert decimal
-    lea     eax, [ebp - 19]     ; load the address of string buffer
-    push    eax                 ; pass the address of buffer to convert_decimal_number subroutine
-    call    convert_decimal_number
-    add     esp, 4              ; pop arguments from the stack
-    jmp     return
-
-no_number:
-    xor     eax, eax    ; if there was no number in string, return 0
+; no_number:
+;     xor     eax, eax    ; if there was no number in string, return 0
 
 return:
     ; epilogue
     pop     esi
-    pop     edx
-    add     esp, 20
     leave
     ret
 
@@ -152,13 +130,13 @@ next_digit:
 
 not_decimal:
     cmp     BYTE [esi], 'F' 
-    ; jg      not_upper_case  ; if not upper case letter, convert lower case letter
+    jg      not_upper_case  ; if not upper case letter, convert lower case letter
 
     sub     eax, 55         ; substract ASCII code 55 to get the proper value
     jmp     save_result
 
 ; not_upper_case:
-;     sub     eax, 87     ; substract ASCII code 87 to get the proper value
+    sub     eax, 87     ; substract ASCII code 87 to get the proper value
 
 save_result:
     mov     dl, BYTE [esi]
