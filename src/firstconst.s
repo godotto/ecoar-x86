@@ -134,47 +134,74 @@ state_q3:
     mov     al, BYTE [esi]  ; load the character
 
     cmp     al, 59
-    je      convert_decimal_number     ; if character is a semicolon, it is a comment and go to q6 (final state with number found)
+    je      state_q6     ; if character is a semicolon, it is a comment and go to q6 (final state with number found)
 
     test    al, al
-    jz      convert_decimal_number     ; if character is null terminator, it is the end of string and go to q6 (final state with number found)
+    jz      state_q6     ; if character is null terminator, it is the end of string and go to q6 (final state with number found)
 
     cmp     al, ' '
-    je      convert_decimal_number     ; if character is space, go to q6 (final state with number found)
+    je      state_q6     ; if character is space, go to q6 (final state with number found)
 
     cmp     al, ']'
-    je      convert_decimal_number     ; if character is a left square bracket, go to q6 (final state with number found)
+    je      state_q6     ; if character is a right square bracket, go to q6 (final state with number found)
 
     cmp     al, '+'
     jb      invalid_string
 
     cmp     al, '-'
-    jna     convert_decimal_number     ; if character is +, - or a comma go to q6 (final state with number found)
+    jna     state_q6     ; if character is +, - or a comma go to q6 (final state with number found)
 
-not_decimal:
     cmp     al, 'o'
-    je      convert_octal
+    je      state_q6
 
     cmp     al, 'q'
-    jne     not_octal
+    je      state_q6
 
-convert_octal:
-    mov     cl, 3           ; pass the exponent to make proper number of shifts in order to multiply by 8
-    jmp     convert_number  ; if it is octal system, convert number
-
-not_octal:
     cmp     al, 'h'
-    jne     not_hex
+    je      state_q6
 
-    mov     cl, 4           ; pass the exponent to make proper number of shifts in order to multiply by 16
-    jmp     convert_number  ; if it is hexadecimal system, convert number
+;     cmp     al, 59
+;     je      convert_decimal_number     ; if character is a semicolon, it is a comment and go to q6 (final state with number found)
 
-not_hex:
+;     test    al, al
+;     jz      convert_decimal_number     ; if character is null terminator, it is the end of string and go to q6 (final state with number found)
+
+;     cmp     al, ' '
+;     je      convert_decimal_number     ; if character is space, go to q6 (final state with number found)
+
+;     cmp     al, ']'
+;     je      convert_decimal_number     ; if character is a right square bracket, go to q6 (final state with number found)
+
+;     cmp     al, '+'
+;     jb      invalid_string
+
+;     cmp     al, '-'
+;     jna     convert_decimal_number     ; if character is +, - or a comma go to q6 (final state with number found)
+
+; not_decimal:
+;     cmp     al, 'o'
+;     je      convert_octal
+
+;     cmp     al, 'q'
+;     jne     not_octal
+
+; convert_octal:
+;     mov     cl, 3           ; pass the exponent to make proper number of shifts in order to multiply by 8
+;     jmp     convert_number  ; if it is octal system, convert number
+
+; not_octal:
+;     cmp     al, 'h'
+;     jne     not_hex
+
+;     mov     cl, 4           ; pass the exponent to make proper number of shifts in order to multiply by 16
+;     jmp     convert_number  ; if it is hexadecimal system, convert number
+
+; not_hex:
     cmp     al, 'b'
-    je     state_q4
+    je      state_q4
 
     cmp     al, 'd'
-    je     state_q4
+    je      state_q4
 
     cmp     al, '0'
     jb      invalid_string          ; if it chatacter is less than any digit, it is invalid character
@@ -199,13 +226,45 @@ not_hex:
 
     cmp     al, 'f'
     je      state_q3
+    jmp     invalid_string
 
-state_q4:
-    mov     eax, 4
+state_q4:                   ; state q4 - check suffix
+    inc     edi             ; increment digit counter
+    inc     esi             ; move to the next character
+    mov     al, BYTE [esi]  ; load the character
+
+    ; cmp     al, 'h'
+    ; jne     
+
 state_q5:
-    mov     eax, 5
+    mov     eax, 0
+    jmp     return
+
 state_q6:
-    mov     eax, 6
+    cmp     al, 'o'
+    je      convert_oct
+
+    cmp     al, 'q'
+    jne     not_oct
+
+convert_oct:
+    mov     cl, 3           ; pass the exponent to make proper number of shifts in order to multiply by 8
+    jmp     convert_number  ; if it is octal system, convert number
+
+not_oct:
+    cmp     al, 'h'
+    jne     not_hex
+    mov     cl, 4           ; pass the exponent to make proper number of shifts in order to multiply by 16
+    jmp     convert_number  ; if it is hexadecimal system, convert number
+
+not_hex:
+    cmp     al, 'b'
+    jne     not_bin
+    mov     cl, 1           ; pass the exponent to make proper number of shifts in order to multiply by 2
+    jmp     convert_number  ; if it is binary system, convert number
+
+not_bin:
+    jmp     convert_decimal_number
 
 invalid_string:
 
