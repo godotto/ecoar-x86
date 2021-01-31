@@ -7,6 +7,8 @@ firstconst:
     push    ebp
     mov     ebp, esp
     push    esi
+    push    ebx
+    push    edi
 
     mov     esi, [ebp + 8]  ; string's argument index
     
@@ -19,8 +21,8 @@ firstconst:
     cmp     al, 59
     je      state_q5        ; if character is a semicolon, it is a comment and go to q5 (final state)
 
-    cmp     al, 0
-    je      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
+    test    al, al
+    jz      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
 
     cmp     al, 'A'
     jb      invalid_string  ; if character is below A, it is not a valid first character and automaton is stuck
@@ -44,8 +46,8 @@ state_q1:                   ; state q1 - token
     cmp     al, 59
     je      state_q5        ; if character is a semicolon, it is a comment and go to q5 (final state)
 
-    cmp     al, 0
-    je      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
+    test    al, al
+    jz      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
 
     cmp     al, ' '
     je      state_q2        ; if character is space, go to state q2 (separator)
@@ -78,57 +80,132 @@ state_q1:                   ; state q1 - token
     jna     state_q1        ; if character is lower case letter, stay at q1
     jmp     invalid_string  ; if it is other character, it is invalid and automaton is stuck
     
-state_q2:                   ; state q2 - separator
-    inc     esi             ; move to the next character
-    mov     al, BYTE [esi]  ; load the character
+state_q2:                            ; state q2 - separator
+    inc     esi                      ; move to the next character
+    mov     al, BYTE [esi]           ; load the character
 
     cmp     al, 59
-    je      state_q5        ; if character is a semicolon, it is a comment and go to q5 (final state)
+    je      state_q5                 ; if character is a semicolon, it is a comment and go to q5 (final state)
 
-    cmp     al, 0
-    je      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
+    test    al, al
+    jz      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
 
     cmp     al, ' '
-    je      state_q2        ; if character is space, stay at state q2
+    je      state_q2                 ; if character is space, stay at state q2
 
     cmp     al, ']'
-    je      state_q2        ; if character is a right square bracket, stay at q2
+    je      state_q2                 ; if character is a right square bracket, stay at q2
 
     cmp     al, '['
-    je      state_q2        ; if character is a left square bracket, stay at q2
+    je      state_q2                 ; if character is a left square bracket, stay at q2
 
     cmp     al, '+'
     jb      invalid_string
 
     cmp     al, '-'
-    jna     state_q2        ; if character is +, - or a comma stay at q2
+    jna     state_q2                ; if character is +, - or a comma stay at q2
 
     cmp     al, '0'
-    jb      invalid_string  ; if it chatacter is less than any digit, it is invalid character
+    jb      invalid_string          ; if it chatacter is less than any digit, it is invalid character
 
     cmp     al, '9'
-    jna     state_q3        ; if it is a digit, go to q3 (number)
+    jna     state_q3_save_pointer   ; if it is a digit, go to q3 (number)
 
     cmp     al, 'A'
-    jb      invalid_string  ; if character is below A, it is not a valid first character and automaton is stuck
+    jb      invalid_string          ; if character is below A, it is not a valid first character and automaton is stuck
 
     cmp     al, 'Z'
-    jna     state_q1        ; if character is upper case letter, go to q1 (token)
+    jna     state_q1                ; if character is upper case letter, go to q1 (token)
 
     cmp     al, 'a'
-    jb      invalid_string  ; if character is below a, it is not a valid first character and automaton is stuck
+    jb      invalid_string          ; if character is below a, it is not a valid first character and automaton is stuck
 
     cmp     al, 'z' 
-    jna     state_q1        ; if character is lower case letter, go to q1 (token)
+    jna     state_q1                ; if character is lower case letter, go to q1 (token)
     jmp     invalid_string
 
+state_q3_save_pointer:      ; state q3 - number
+    mov     edx, esi        ; save address of the beginning of the number
+    xor     edi, edi        ; clear digit counter
+
 state_q3:
-   
+    inc     edi             ; increment digit counter
+    inc     esi             ; move to the next character
+    mov     al, BYTE [esi]  ; load the character
+
+    cmp     al, 59
+    je      convert_decimal_number     ; if character is a semicolon, it is a comment and go to q6 (final state with number found)
+
+    test    al, al
+    jz      convert_decimal_number     ; if character is null terminator, it is the end of string and go to q6 (final state with number found)
+
+    cmp     al, ' '
+    je      convert_decimal_number     ; if character is space, go to q6 (final state with number found)
+
+    cmp     al, ']'
+    je      convert_decimal_number     ; if character is a left square bracket, go to q6 (final state with number found)
+
+    cmp     al, '+'
+    jb      invalid_string
+
+    cmp     al, '-'
+    jna     convert_decimal_number     ; if character is +, - or a comma go to q6 (final state with number found)
+
+not_decimal:
+    cmp     al, 'o'
+    je      convert_octal
+
+    cmp     al, 'q'
+    jne     not_octal
+
+convert_octal:
+    mov     cl, 3           ; pass the exponent to make proper number of shifts in order to multiply by 8
+    jmp     convert_number  ; if it is octal system, convert number
+
+not_octal:
+    cmp     al, 'h'
+    jne     not_hex
+
+    mov     cl, 4           ; pass the exponent to make proper number of shifts in order to multiply by 16
+    jmp     convert_number  ; if it is hexadecimal system, convert number
+
+not_hex:
+    cmp     al, 'b'
+    je     state_q4
+
+    cmp     al, 'd'
+    je     state_q4
+
+    cmp     al, '0'
+    jb      invalid_string          ; if it chatacter is less than any digit, it is invalid character
+
+    cmp     al, '9'
+    jna     state_q3                ; if it is a digit, stay at q3
+
+    cmp     al, 'A'
+    jb      invalid_string          ; if character is below A, it is not a valid first character and automaton is stuck
+
+    cmp     al, 'F'
+    jna     state_q3                ; if character is upper case digit, stay at q3
+
+    cmp     al, 'a'
+    je      state_q3
+
+    cmp     al, 'c'
+    je      state_q3
+
+    cmp     al, 'e'
+    je      state_q3
+
+    cmp     al, 'f'
+    je      state_q3
+
 state_q4:
-   
+    mov     eax, 4
 state_q5:
-   
+    mov     eax, 5
 state_q6:
+    mov     eax, 6
 
 invalid_string:
 
@@ -187,33 +264,28 @@ invalid_string:
 
 return:
     ; epilogue
+    pop     edi
+    pop     ebx
     pop     esi
     leave
     ret
 
 convert_number:
-    ; prologue
-    push    ebp
-    mov     ebp, esp
-    push    esi
-
-    mov     esi, [ebp + 12]     ; set index on the beginning of buffer array
-
-    xor     eax, eax            ; clear accumulator, it will store the converted value
-    xor     edx, edx            ; clear temporary register
-    mov     cl, BYTE [ebp + 8]  ; load cl with exponent - only cl can be used for that purpose
+    xor     eax, eax    ; clear accumulator, it will store the converted value
+    xor     ebx, ebx    ; clear temporary register
 
 next_digit:
+    dec     edi
     shl     eax, cl         ; multiply accumulator's value by adequate power of 2
     
-    cmp     BYTE [esi], '9'
-    jg      not_decimal     ; if not decimal digit, check if upper or lower case letter
+    cmp     BYTE [edx], '9'
+    jg      convert_not_decimal     ; if not decimal digit, check if upper or lower case letter
 
     sub     eax, 48         ; substract value of ASCII code for '0' to get the proper value
     jmp     save_result
 
-not_decimal:
-    cmp     BYTE [esi], 'F' 
+convert_not_decimal:
+    cmp     BYTE [edx], 'F' 
     jg      not_upper_case  ; if not upper case letter, convert lower case letter
 
     sub     eax, 55         ; substract ASCII code 55 to get the proper value
@@ -223,41 +295,31 @@ not_upper_case:
     sub     eax, 87     ; substract ASCII code 87 to get the proper value
 
 save_result:
-    mov     dl, BYTE [esi]
+    mov     bl, BYTE [edx]
     ; add     al, BYTE [esi] ; add digit's ASCII code to accumulator
-    add     eax, edx
-    inc     esi             ; increment buffer index
+    add     eax, ebx
+    inc     edx             ; increment buffer index
 
-    cmp     BYTE [esi], 0
-    jne     next_digit      ; if character is '\0', finish subroutine
+    test    edi, edi
+    jnz     next_digit      ; if character counter is 0, return value
 
-    ; epilogue
-    pop     esi
-    leave
-    ret
+    jmp     return
 
 convert_decimal_number:
-    ; prologue
-    push    ebp
-    mov     ebp, esp
-    push    esi
-
-    mov     esi, [ebp + 8]     ; set index on the beginning of buffer array
-    xor     eax, eax            ; clear accumulator, it will store the converted value
+    xor     eax, eax    ; clear accumulator, it will store the converted value
+    xor     ebx, ebx    ; clear temporary register
 
 next_digit_decimal:
+    dec     edi
     imul    eax, 10
     sub     eax, 48             ; substract value of ASCII code for '0' to get the proper value
 
-    mov     dl, BYTE [esi]
-    ; add     al, BYTE [esi]    ; add digit's ASCII code to accumulator
-    add     eax, edx
-    inc     esi                 ; increment buffer index
+    mov     bl, BYTE [edx]
+    ; add     al, BYTE [esi] ; add digit's ASCII code to accumulator
+    add     eax, ebx
+    inc     edx             ; increment buffer index
 
-    cmp     BYTE [esi], 0
-    jne     next_digit_decimal  ; if character is '\0', finish subroutine
+    test    edi, edi
+    jnz     next_digit_decimal      ; if character counter is 0, return value
 
-    ; epilogue
-    pop     esi
-    leave
-    ret
+    jmp     return
