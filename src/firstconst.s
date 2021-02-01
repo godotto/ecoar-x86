@@ -18,7 +18,7 @@ firstconst:
     cmp     al, ' '
     je      state_q2        ; if character is space, go to state q2 (separator)
 
-    cmp     al, 59
+    cmp     al, ';'
     je      state_q5        ; if character is a semicolon, it is a comment and go to q5 (final state)
     test    al, al
     jz      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
@@ -39,7 +39,7 @@ state_q1:                   ; state q1 - token
     cmp     al, ':'
     je      state_q1        ; if character is a colon, it is a label and go to q1
 
-    cmp     al, 59
+    cmp     al, ';'
     je      state_q5        ; if character is a semicolon, it is a comment and go to q5 (final state)
     test    al, al
     jz      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
@@ -69,12 +69,12 @@ state_q1:                   ; state q1 - token
     
 state_q2:                            ; state q2 - separator
     inc     esi                      ; move to the next character
-    mov     al, BYTE [esi]           ; load the character
+    mov     al, [esi]                ; load the character
 
-    cmp     al, 59
+    cmp     al, ';'
     je      state_q5                 ; if character is a semicolon, it is a comment and go to q5 (final state)
     test    al, al
-    jz      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
+    jz      state_q5                 ; if character is null terminator, it is the end of string and go to q5 (final state)
 
     cmp     al, ' '
     je      state_q2                 ; if character is space, stay at state q2
@@ -111,7 +111,7 @@ state_q3:
     inc     esi             ; move to the next character
     mov     al, BYTE [esi]  ; load the character
 
-    cmp     al, 59
+    cmp     al, ';'
     je      state_q6     ; if character is a semicolon, it is a comment and go to q6 (final state with number found)
     test    al, al
     jz      state_q6     ; if character is null terminator, it is the end of string and go to q6 (final state with number found)
@@ -159,7 +159,7 @@ state_q4:                             ; state q4 - check suffix
     inc     esi                       ; move to the next character
     mov     al, BYTE [esi]            ; load the character
 
-    cmp     al, 59
+    cmp     al, ';'
     je      state_q6_restore_prev     ; if character is a semicolon, it is a comment and go to q6 (final state with number found)
     test    al, al
     jz      state_q6_restore_prev     ; if character is null terminator, it is the end of string and go to q6 (final state with number found)
@@ -191,7 +191,7 @@ state_q5:
     jmp     return
 
 state_q6_restore_prev:
-    mov     al, BYTE [esi - 1]
+    mov     al, [esi - 1]
     dec     edi
 
 state_q6:                   ; state q6 - constant number has been found
@@ -212,12 +212,9 @@ not_oct:
 
 not_hex:
     cmp     al, 'b'
-    jne     not_bin
+    jne     convert_decimal_number
     mov     cl, 1           ; pass the exponent to make proper number of shifts in order to multiply by 2
     jmp     convert_number  ; if it is binary system, convert number
-
-not_bin:
-    jmp     convert_decimal_number
 
 invalid_string:
     mov     eax, 1
@@ -230,7 +227,7 @@ return:
     leave
     ret
 
-;------------------ convertion subroutines --------------------------------------
+;------------------ convertion --------------------------------------
 
 convert_number:
     xor     eax, eax    ; clear accumulator, it will store the converted value
@@ -239,25 +236,26 @@ convert_number:
 next_digit:
     dec     edi
     shl     eax, cl                 ; multiply accumulator's value by adequate power of 2
-    
-    cmp     BYTE [edx], '9'
+    mov     bl, [edx]
+
+    cmp     bl, '9'
     jg      convert_not_decimal     ; if not decimal digit, check if upper or lower case letter
 
-    sub     eax, 48                 ; substract value of ASCII code for '0' to get the proper value
+    sub     eax, '0'                 ; substract value of ASCII code for '0' to get the proper value
     jmp     save_result
 
 convert_not_decimal:
-    cmp     BYTE [edx], 'F' 
+    
+    cmp     bl, 'F' 
     jg      not_upper_case  ; if not upper case letter, convert lower case letter
 
-    sub     eax, 55         ; substract ASCII code 55 to get the proper value
+    sub     eax, 'A'-10     ; substract ASCII code 55 to get the proper value
     jmp     save_result
 
 not_upper_case:
-    sub     eax, 87     ; substract ASCII code 87 to get the proper value
+    sub     eax, 'a'-10     ; substract ASCII code 87 to get the proper value
 
 save_result:
-    mov     bl, BYTE [edx]
     add     eax, ebx
     inc     edx             ; increment buffer index
 
@@ -275,7 +273,7 @@ next_digit_decimal:
     imul    eax, 10
     sub     eax, 48             ; substract value of ASCII code for '0' to get the proper value
 
-    mov     bl, BYTE [edx]
+    mov     bl, [edx]
     add     eax, ebx
     inc     edx                 ; increment buffer index
 
