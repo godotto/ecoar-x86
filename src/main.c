@@ -13,7 +13,7 @@ int main(int argc, char const *argv[])
     }
     
     char *input = strdup(argv[1]);
-    printf("First integer in string: %d\n", firstconst(input));
+    printf("%d", firstconst(input));
     free(input);
 
     return 0;
