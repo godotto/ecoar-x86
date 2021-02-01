@@ -44,11 +44,13 @@ state_q1:                   ; state q1 - token
     test    al, al
     jz      state_q5        ; if character is null terminator, it is the end of string and go to q5 (final state)
 
+    cmp     al, 39
+    je      state_q2
     cmp     al, ' '
     je      state_q2        ; if character is space, go to state q2 (separator)
     cmp     al, ']'
     je      state_q2        ; if character is a right square bracket, go to q2 (separator)
-    cmp     al, '+'
+    cmp     al, '*'
     jb      invalid_string
     cmp     al, '-'
     jna     state_q2        ; if character is +, - or a comma go to q2 (separator)
@@ -76,13 +78,15 @@ state_q2:                            ; state q2 - separator
     test    al, al
     jz      state_q5                 ; if character is null terminator, it is the end of string and go to q5 (final state)
 
+    cmp     al, 39
+    je      state_q2
     cmp     al, ' '
     je      state_q2                 ; if character is space, stay at state q2
     cmp     al, ']'
     je      state_q2                 ; if character is a right square bracket, stay at q2
     cmp     al, '['
     je      state_q2                 ; if character is a left square bracket, stay at q2
-    cmp     al, '+'
+    cmp     al, '*'
     jb      invalid_string
     cmp     al, '-'
     jna     state_q2                ; if character is +, - or a comma stay at q2
@@ -111,6 +115,8 @@ state_q3:
     inc     esi             ; move to the next character
     mov     al, BYTE [esi]  ; load the character
 
+    cmp     al, 39
+    je      state_q6
     cmp     al, ';'
     je      state_q6     ; if character is a semicolon, it is a comment and go to q6 (final state with number found)
     test    al, al
@@ -119,7 +125,7 @@ state_q3:
     je      state_q6     ; if character is space, go to q6 (final state with number found)
     cmp     al, ']'
     je      state_q6     ; if character is a right square bracket, go to q6 (final state with number found)
-    cmp     al, '+'
+    cmp     al, '*'
     jb      invalid_string
     cmp     al, '-'
     jna     state_q6     ; if character is +, - or a comma go to q6 (final state with number found)
@@ -167,7 +173,7 @@ state_q4:                             ; state q4 - check suffix
     je      state_q6_restore_prev     ; if character is space, go to q6 (final state with number found)
     cmp     al, ']'
     je      state_q6_restore_prev     ; if character is a right square bracket, go to q6 (final state with number found)
-    cmp     al, '+'
+    cmp     al, '*'
     jb      invalid_string
     cmp     al, '-'
     jna     state_q6_restore_prev     ; if character is +, - or a comma go to q6 (final state with number found)
